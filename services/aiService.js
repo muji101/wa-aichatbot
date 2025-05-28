@@ -41,7 +41,7 @@ class AIService {
     if (process.env.GEMINI_API_KEY) {
       this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       this.geminiModel = this.gemini.getGenerativeModel({ 
-        model: process.env.GEMINI_MODEL || 'gemini-pro' 
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash' 
       });
     }
 
@@ -365,7 +365,7 @@ class AIService {
           configured: !!this.openrouter
         },
         gemini: {
-          model: process.env.GEMINI_MODEL || 'gemini-pro',
+          model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
           configured: !!this.gemini
         }
       }

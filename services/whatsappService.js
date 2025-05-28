@@ -45,7 +45,7 @@ class WhatsAppService {
     if (this.aiProvider === 'gemini') {
       this.geminiApiKey = process.env.GEMINI_API_KEY;
       if (this.geminiApiKey) {
-        this.geminiClient = new GoogleGenerativeAI(this.geminiApiKey).getGenerativeModel({ model: "gemini-pro" });
+        this.geminiClient = new GoogleGenerativeAI(this.geminiApiKey).getGenerativeModel({ model: "gemini-2.0-flash" });
         console.log('🔄 Gemini Service configured.');
       } else {
         console.warn('⚠️ Gemini API key not provided. Gemini will not be available.');
