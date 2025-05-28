@@ -35,7 +35,7 @@ pnpm --version
 
 ```bash
 # 1. Clone repository
-git clone <your-repo-url>
+git clone https://github.com/paijoe29/wa-aichatbot.git
 cd wa-aichatbot
 
 # 2. Install dependencies

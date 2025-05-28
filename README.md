@@ -45,7 +45,7 @@ Bot WhatsApp pintar dengan integrasi AI menggunakan **Baileys** (WhatsApp Web AP
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/paijoe29/wa-aichatbot.git
 cd wa-aichatbot
 ```
 
