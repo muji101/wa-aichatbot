@@ -4,6 +4,8 @@
 .env.development
 .env.production
 .env.test
+# BUT ALLOW .env.example (template file)
+!.env.example
 
 # Node.js
 node_modules/
@@ -81,9 +83,6 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env*
-
 # parcel-bundler cache
 .cache/
 .parcel-cache/
@@ -97,7 +96,7 @@ dist/
 
 # Gatsby files
 .cache/
-public/
+# public/ - REMOVED: Our public folder contains important dashboard files
 
 # Vuepress build output
 .vuepress/dist/

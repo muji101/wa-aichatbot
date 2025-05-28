@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WA AI Chat Bot</title>
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container relative">
+        <!-- Header Section -->
+        <div class="header fade-in">
+            <div class="header-content">
+                <h1>🤖 WhatsApp AI Chat Bot</h1>
+                <p class="header-subtitle">Kelola bot WhatsApp AI Anda dengan mudah</p>
+                <div class="status" id="connectionStatus">
+                    <div class="loading-spinner"></div>
+                    Connecting...
+                </div>
+            </div>
+            
+            <!-- Social Buttons - Mobile: horizontal icons below description -->
+            <!-- Desktop: vertical buttons with text, absolute positioned to top-right of container -->
+            <div class="social-buttons">
+                <a href="https://trakteer.id/orifin" target="_blank"
+                   aria-label="Trakteer Saya - Support melalui Trakteer"
+                   title="Trakteer Saya - Support melalui Trakteer"
+                   class="social-btn social-btn-trakteer">
+                    <i class="fas fa-coffee text-lg md:mr-2" aria-hidden="true"></i> 
+                    <span class="hidden md:inline">Trakteer Saya</span>
+                    <span class="sr-only md:hidden">Trakteer Saya - Support melalui Trakteer</span>
+                </a>
+                <a href="https://ko-fi.com/orifin" target="_blank"
+                   aria-label="Support Me - Dukung saya melalui Ko-fi"
+                   title="Support Me - Dukung saya melalui Ko-fi"
+                   class="social-btn social-btn-kofi">
+                    <i class="fas fa-heart text-lg md:mr-2" aria-hidden="true"></i> 
+                    <span class="hidden md:inline">Support Me</span>
+                    <span class="sr-only md:hidden">Support Me - Dukung saya melalui Ko-fi</span>
+                </a>
+                <a href="https://www.threads.com/@ori_fin" target="_blank"
+                   aria-label="Follow Me - Ikuti saya di Threads"
+                   title="Follow Me - Ikuti saya di Threads"
+                   class="social-btn social-btn-threads">
+                    <i class="fas fa-at text-lg md:mr-2" aria-hidden="true"></i> 
+                    <span class="hidden md:inline">Follow Me</span>
+                    <span class="sr-only md:hidden">Follow Me - Ikuti saya di Threads</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content Section -->
+        <div class="main-content">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <i data-feather="smartphone" class="card-icon"></i>
+                    <h3>WhatsApp Control</h3>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="botStatus">❌</div>
+                        <div class="stat-label">Bot Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="messageCount">0</div>
+                        <div class="stat-label">Messages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="blockedCount">0</div>
+                        <div class="stat-label">Blocked</div>
+                    </div>
+                </div>
+                
+                <div class="control-group" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn" onclick="startWhatsApp()">
+                        <i data-feather="play"></i>
+                        Start Bot
+                    </button>
+                    <button class="btn danger" onclick="stopWhatsApp()">
+                        <i data-feather="stop-circle"></i>
+                        Stop Bot
+                    </button>
+                    <button class="btn secondary" onclick="clearSession()">
+                        <i data-feather="trash-2"></i>
+                        Hapus Session
+                    </button>
+                </div>
+                
+                <div class="qr-container" id="qrContainer">
+                    <i data-feather="square" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 1rem;"></i>
+                    <p>Click "Start Bot" to generate QR code</p>
+                </div>
+            </div>
+            
+            <div class="card fade-in">
+                <div class="card-header">
+                    <i data-feather="cpu" class="card-icon"></i>
+                    <h3>AI Provider Configuration</h3>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Current AI Provider:</label>
+                    <div id="currentProvider" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
+                        Loading...
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="aiProvider">Select AI Provider:</label>
+                    <select class="form-input" id="aiProvider" onchange="onProviderChange()">
+                        <option value="openai">OpenAI (GPT-4o-mini)</option>
+                        <option value="openrouter">OpenRouter (Multiple Models)</option>
+                        <option value="gemini">Google Gemini Pro</option>
+                    </select>
+                    <div class="form-helper">
+                        <i data-feather="info" style="width: 14px; height: 14px;"></i>
+                        Memerlukan restart server setelah mengganti provider
+                    </div>
+                </div>
+
+                <div class="provider-status" id="providerStatus">
+                    <!-- Provider status will be populated here -->
+                </div>
+
+                <div class="api-key-config" id="apiKeyConfig" style="margin-top: 1rem;">
+                    <!-- API key configuration will be shown here -->
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button class="btn" onclick="updateProvider(true)">
+                        <i data-feather="zap"></i>
+                        Hot Reload Provider
+                    </button>
+                    <button class="btn secondary" onclick="updateProvider(false)">
+                        <i data-feather="settings"></i>
+                        Update Provider
+                    </button>
+                    <button class="btn outline" onclick="loadProviderConfig()">
+                        <i data-feather="refresh-cw"></i>
+                        Refresh Status
+                    </button>
+                    <button class="btn secondary" onclick="testAI()">
+                        <i data-feather="zap"></i>
+                        Test AI
+                    </button>
+                </div>
+            </div>
+
+            <div class="card fade-in">
+                <div class="card-header">
+                    <i data-feather="cpu" class="card-icon"></i>
+                    <h3>AI Configuration</h3>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="systemPrompt">System Prompt:</label>
+                    <textarea 
+                        class="form-textarea" 
+                        id="systemPrompt" 
+                        placeholder="Enter your AI system prompt here..."
+                        rows="6"
+                    ></textarea>
+                    <div class="form-helper">
+                        <i data-feather="info" style="width: 14px; height: 14px;"></i>
+                        Instruksi untuk mengatur perilaku AI bot
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                    <button class="btn" onclick="updatePrompt()">
+                        <i data-feather="save"></i>
+                        Update Prompt
+                    </button>
+                    <button class="btn" onclick="updatePrompt(true)">
+                        <i data-feather="zap"></i>
+                        Hot Reload Prompt
+                    </button>
+                    <button class="btn outline" onclick="loadPrompt()">
+                        <i data-feather="refresh-cw"></i>
+                        Load Current
+                    </button>
+                </div>
+
+                <!-- Blacklist Words Section -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <i data-feather="shield" style="width: 20px; height: 20px; color: var(--primary-green);"></i>
+                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Blacklist Words</h4>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="blacklistWords">Kata-kata Terlarang:</label>
+                        <textarea 
+                            class="form-textarea" 
+                            id="blacklistWords" 
+                            placeholder="spam,iklan,judi,togel,casino..."
+                            rows="4"
+                        ></textarea>
+                        <div class="form-helper">
+                            <i data-feather="alert-triangle" style="width: 14px; height: 14px;"></i>
+                            <span id="blacklistCount">0</span> kata dalam blacklist • Pisahkan dengan koma
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn" onclick="updateBlacklist()">
+                            <i data-feather="save"></i>
+                            Update Blacklist
+                        </button>
+                        <button class="btn outline" onclick="loadBlacklist()">
+                            <i data-feather="refresh-cw"></i>
+                            Load Current
+                        </button>
+                        <button class="btn secondary" onclick="testBlacklist()">
+                            <i data-feather="zap"></i>
+                            Test Message
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Section -->
+        <div class="messages-container fade-in">
+            <div class="messages-header">
+                <div class="messages-title">
+                    <i data-feather="message-circle"></i>
+                    Live Messages
+                </div>
+                <div class="messages-controls">
+                    <button class="btn outline" onclick="clearMessages()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
+                        Clear
+                    </button>
+                </div>
+            </div>
+            
+            <div class="messages" id="messages">
+                <div class="empty-state">
+                    <i data-feather="message-square" class="empty-state-icon"></i>
+                    <p>No messages yet. Messages will appear here in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer - External Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
