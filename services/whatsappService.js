@@ -29,7 +29,7 @@ class WhatsAppService {
     // OpenRouter Configuration
     if (this.aiProvider === 'openrouter') {
       this.openRouterApiKey = process.env.OPENROUTER_API_KEY;
-      this.openRouterModel = process.env.OPENROUTER_MODEL_NAME || 'openai/gpt-3.5-turbo';
+      this.openRouterModel = process.env.OPENROUTER_MODEL_NAME || 'openai/gpt-4o-mini-2024-07-18';
       if (this.openRouterApiKey) {
         this.openRouterClient = new OpenAI({
           apiKey: this.openRouterApiKey,
@@ -75,24 +75,24 @@ class WhatsAppService {
     return true;
   }
 
-  // New method to reload system prompt
-  reloadSystemPrompt() {
-    console.log('🔄 Reloading System Prompt configuration...');
+  // New method to reload auto-reply configuration
+  reloadAutoReplyConfig() {
+    console.log('🔄 Reloading Auto-Reply configuration...');
     
     try {
-      // Reload system prompt in openaiService
-      this.openaiService.reloadSystemPrompt();
+      // Reload auto-reply config in openaiService
+      this.openaiService.reloadAutoReplyConfig();
       
       // Emit update to connected clients
-      this.io.emit('system-prompt-reloaded', {
+      this.io.emit('auto-reply-config-reloaded', {
         timestamp: new Date(),
-        message: 'System prompt reloaded successfully'
+        message: 'Auto-reply configuration reloaded successfully'
       });
       
-      console.log('✅ System Prompt reloaded successfully');
+      console.log('✅ Auto-Reply configuration reloaded successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to reload system prompt:', error);
+      console.error('❌ Failed to reload auto-reply config:', error);
       return false;
     }
   }
@@ -203,6 +203,22 @@ class WhatsAppService {
 
       console.log(`📨 Message from ${senderNumber}: ${messageText}`);
 
+      // Check if auto-reply is enabled for this chat type
+      if (!this.openaiService.shouldAutoReply(isGroup)) {
+        console.log(`🔇 Auto-reply disabled for ${isGroup ? 'group' : 'private'} chat: ${senderNumber}`);
+        
+        // Emit info to web clients about skipped message
+        this.io.emit('message-skipped', {
+          from: senderId,
+          body: messageText,
+          timestamp: new Date(),
+          isGroup: isGroup,
+          reason: isGroup ? 'Group auto-reply disabled' : 'Private auto-reply disabled'
+        });
+        
+        return; // Skip AI processing
+      }
+
       // Process with AI if message is not empty
       if (messageText && messageText.trim()) {
         await this.processWithAI(message, messageText, senderNumber, senderId);
@@ -232,11 +248,30 @@ class WhatsAppService {
 
   async processWithAI(message, messageText, senderNumber, chatId) {
     try {
+      const isGroup = chatId.includes('@g.us');
+      const senderName = senderNumber.replace('@s.whatsapp.net', '');
+
+      // Check if auto-reply is enabled for this type of chat
+      if (!this.openaiService.shouldAutoReply(isGroup)) {
+        console.log(`🔇 Auto-reply disabled for ${isGroup ? 'group' : 'private'} chat from ${senderName}`);
+        
+        // Emit message as received but no auto-reply
+        this.io.emit('message-received-no-reply', {
+          from: chatId,
+          message: messageText,
+          contact: senderName,
+          isGroup: isGroup,
+          reason: `Auto-reply disabled for ${isGroup ? 'groups' : 'private chats'}`,
+          timestamp: new Date()
+        });
+        
+        return;
+      }
+
       // Show typing indicator
       await this.sock.sendPresenceUpdate('composing', chatId);
 
       let aiResponse;
-      const senderName = senderNumber.replace('@s.whatsapp.net', '');
 
       // Use the configured AI provider
       switch (this.aiProvider) {

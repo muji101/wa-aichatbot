@@ -4,7 +4,8 @@
 .env.development
 .env.production
 .env.test
-
+# BUT ALLOW .env.example (template file)
+!.env.example
 
 # Node.js
 node_modules/

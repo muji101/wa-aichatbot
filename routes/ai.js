@@ -25,7 +25,7 @@ module.exports = (whatsappService) => {
           },
           gemini: {
             hasApiKey: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key-here'),
-            model: 'gemini-2.0-flash'
+            model: 'gemini-pro'
           }
         }
       };
@@ -328,6 +328,180 @@ module.exports = (whatsappService) => {
         conversations,
         blacklist: blacklistStats
       });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Auto-reply configuration routes
+  
+  // Get auto-reply configuration
+  router.get('/auto-reply', (req, res) => {
+    try {
+      const config = openaiService.getAutoReplyConfig();
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update auto-reply configuration
+  router.put('/auto-reply', async (req, res) => {
+    try {
+      const { enabled, privateChats, groups, hotReload = false } = req.body;
+      
+      if (typeof enabled !== 'boolean' || typeof privateChats !== 'boolean' || typeof groups !== 'boolean') {
+        return res.status(400).json({ 
+          error: 'enabled, privateChats, and groups must be boolean values' 
+        });
+      }
+
+      const config = { enabled, privateChats, groups };
+      const success = await openaiService.updateAutoReplyConfig(config);
+      
+      if (success) {
+        // Hot reload if whatsappService is available and hotReload is true
+        let reloadSuccess = false;
+        if (hotReload && whatsappService && whatsappService.reloadAutoReplyConfig) {
+          try {
+            reloadSuccess = whatsappService.reloadAutoReplyConfig();
+          } catch (reloadError) {
+            console.error('Hot reload failed:', reloadError);
+          }
+        }
+        
+        res.json({ 
+          message: reloadSuccess 
+            ? 'Auto-reply configuration updated and reloaded successfully! No restart required.'
+            : 'Auto-reply configuration updated successfully',
+          success: true,
+          config: config,
+          hotReloaded: reloadSuccess
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to update auto-reply configuration' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Hot reload auto-reply config only (without updating file)
+  router.post('/auto-reply/reload', async (req, res) => {
+    try {
+      if (!whatsappService || !whatsappService.reloadAutoReplyConfig) {
+        return res.status(500).json({
+          error: 'WhatsApp service not available for hot reload',
+          success: false
+        });
+      }
+
+      const reloadSuccess = whatsappService.reloadAutoReplyConfig();
+      
+      if (reloadSuccess) {
+        res.json({
+          message: 'Auto-reply configuration reloaded successfully from file!',
+          success: true,
+          config: openaiService.getAutoReplyConfig(),
+          timestamp: new Date()
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to reload auto-reply configuration',
+          success: false
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Error during auto-reply config reload: ' + error.message,
+        success: false 
+      });
+    }
+  });
+
+  // Toggle auto-reply quickly (shortcut endpoints)
+  router.post('/auto-reply/toggle', async (req, res) => {
+    try {
+      const currentConfig = openaiService.getAutoReplyConfig();
+      const newConfig = {
+        ...currentConfig,
+        enabled: !currentConfig.enabled
+      };
+
+      const success = await openaiService.updateAutoReplyConfig(newConfig);
+      
+      if (success) {
+        // Auto hot reload
+        if (whatsappService && whatsappService.reloadAutoReplyConfig) {
+          whatsappService.reloadAutoReplyConfig();
+        }
+        
+        res.json({
+          message: `Auto-reply ${newConfig.enabled ? 'enabled' : 'disabled'} successfully`,
+          success: true,
+          config: newConfig
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to toggle auto-reply' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post('/auto-reply/toggle-private', async (req, res) => {
+    try {
+      const currentConfig = openaiService.getAutoReplyConfig();
+      const newConfig = {
+        ...currentConfig,
+        privateChats: !currentConfig.privateChats
+      };
+
+      const success = await openaiService.updateAutoReplyConfig(newConfig);
+      
+      if (success) {
+        // Auto hot reload
+        if (whatsappService && whatsappService.reloadAutoReplyConfig) {
+          whatsappService.reloadAutoReplyConfig();
+        }
+        
+        res.json({
+          message: `Auto-reply for private chats ${newConfig.privateChats ? 'enabled' : 'disabled'} successfully`,
+          success: true,
+          config: newConfig
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to toggle private chat auto-reply' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post('/auto-reply/toggle-groups', async (req, res) => {
+    try {
+      const currentConfig = openaiService.getAutoReplyConfig();
+      const newConfig = {
+        ...currentConfig,
+        groups: !currentConfig.groups
+      };
+
+      const success = await openaiService.updateAutoReplyConfig(newConfig);
+      
+      if (success) {
+        // Auto hot reload
+        if (whatsappService && whatsappService.reloadAutoReplyConfig) {
+          whatsappService.reloadAutoReplyConfig();
+        }
+        
+        res.json({
+          message: `Auto-reply for groups ${newConfig.groups ? 'enabled' : 'disabled'} successfully`,
+          success: true,
+          config: newConfig
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to toggle group auto-reply' });
+      }
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

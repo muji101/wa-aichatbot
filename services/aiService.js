@@ -253,7 +253,7 @@ class AIService {
     ];
 
     const response = await this.openai.chat.completions.create({
-      model: options.model || process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      model: options.model || process.env.OPENAI_MODEL || 'gpt-4o-mini-2024-07-18',
       messages: messages,
       max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || 1000,
       temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || 0.7,
@@ -273,7 +273,7 @@ class AIService {
     ];
 
     const response = await this.openrouter.chat.completions.create({
-      model: options.model || process.env.OPENROUTER_MODEL || 'openai/gpt-3.5-turbo',
+      model: options.model || process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini-2024-07-18',
       messages: messages,
       max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || 1000,
       temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || 0.7,
@@ -357,11 +357,11 @@ class AIService {
       available: this.getAvailableProviders(),
       configs: {
         openai: {
-          model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini-2024-07-18',
           configured: !!this.openai
         },
         openrouter: {
-          model: process.env.OPENROUTER_MODEL || 'openai/gpt-3.5-turbo',
+          model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini-2024-07-18',
           configured: !!this.openrouter
         },
         gemini: {

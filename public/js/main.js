@@ -305,21 +305,22 @@ socket.on('error', (data) => {
     addMessage('Error', data.message, 'error');
 });
 
-// AI Provider hot reload events
-socket.on('ai-provider-reloaded', (data) => {
+// Auto-reply hot reload events
+socket.on('auto-reply-config-reloaded', (data) => {
     addMessage('System', `🔥 ${data.message}`, 'system');
-    showNotification(`🔥 Hot Reload Complete!\n\nAI Provider: ${getProviderName(data.newProvider)}\nNo restart required!`, 'success');
+    showNotification(`🔥 Auto-Reply Config Hot Reload Complete!\n\nConfiguration updated instantly without restart!`, 'success');
     
-    // Auto-refresh provider config to show new status
+    // Auto-refresh auto-reply config to show new status
     setTimeout(() => {
-        loadProviderConfig();
+        loadAutoReplyConfig();
     }, 1000);
 });
 
-// System prompt hot reload events
-socket.on('system-prompt-reloaded', (data) => {
-    addMessage('System', `🔥 ${data.message}`, 'system');
-    showNotification(`🔥 System Prompt Hot Reload Complete!\n\nPrompt updated instantly without restart!`, 'success');
+// Message received but no auto-reply event
+socket.on('message-received-no-reply', (data) => {
+    messageCount++;
+    document.getElementById('messageCount').textContent = messageCount;
+    addMessage(`${data.contact} (No Reply)`, `${data.message} \n\n🔇 ${data.reason}`, 'received');
 });
 
 // Functions
@@ -833,6 +834,162 @@ async function testAI() {
     }
 }
 
+// Auto-Reply Configuration Functions
+async function loadAutoReplyConfig() {
+    try {
+        const response = await fetch('/api/ai/auto-reply');
+        const config = await response.json();
+        
+        // Update auto-reply status display
+        const statusEl = document.getElementById('autoReplyStatus');
+        const globalStatus = config.enabled;
+        const privateStatus = config.privateChats;
+        const groupStatus = config.groups;
+        
+        statusEl.innerHTML = `
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: ${globalStatus ? 'var(--primary-green)' : '#ef4444'};"></div>
+                    <span style="font-weight: 600; color: ${globalStatus ? 'var(--primary-green)' : '#ef4444'};">
+                        Auto-Reply: ${globalStatus ? 'ON' : 'OFF'}
+                    </span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-feather="user" style="width: 14px; height: 14px; color: ${privateStatus ? 'var(--primary-green)' : '#6b7280'};"></i>
+                    <span style="color: ${privateStatus ? 'var(--primary-green)' : '#6b7280'}; font-size: 0.9rem;">
+                        Private: ${privateStatus ? 'ON' : 'OFF'}
+                    </span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-feather="users" style="width: 14px; height: 14px; color: ${groupStatus ? 'var(--primary-green)' : '#6b7280'};"></i>
+                    <span style="color: ${groupStatus ? 'var(--primary-green)' : '#6b7280'}; font-size: 0.9rem;">
+                        Groups: ${groupStatus ? 'ON' : 'OFF'}
+                    </span>
+                </div>
+            </div>
+        `;
+        
+        // Update button states
+        updateAutoReplyButtons(config);
+        
+        feather.replace();
+    } catch (error) {
+        showNotification('Error loading auto-reply config: ' + error.message, 'error');
+    }
+}
+
+function updateAutoReplyButtons(config) {
+    const toggleAutoReplyBtn = document.getElementById('toggleAutoReply');
+    const togglePrivateBtn = document.getElementById('togglePrivateChats');
+    const toggleGroupsBtn = document.getElementById('toggleGroups');
+    
+    // Update main toggle button
+    if (config.enabled) {
+        toggleAutoReplyBtn.className = 'btn';
+        toggleAutoReplyBtn.innerHTML = `
+            <i data-feather="power" style="width: 16px; height: 16px;"></i>
+            Disable Auto-Reply
+        `;
+    } else {
+        toggleAutoReplyBtn.className = 'btn danger';
+        toggleAutoReplyBtn.innerHTML = `
+            <i data-feather="power" style="width: 16px; height: 16px;"></i>
+            Enable Auto-Reply
+        `;
+    }
+    
+    // Update private chats button
+    if (config.privateChats) {
+        togglePrivateBtn.className = 'btn secondary';
+        togglePrivateBtn.innerHTML = `
+            <i data-feather="user" style="width: 16px; height: 16px;"></i>
+            Disable Private
+        `;
+    } else {
+        togglePrivateBtn.className = 'btn outline';
+        togglePrivateBtn.innerHTML = `
+            <i data-feather="user" style="width: 16px; height: 16px;"></i>
+            Enable Private
+        `;
+    }
+    
+    // Update groups button
+    if (config.groups) {
+        toggleGroupsBtn.className = 'btn secondary';
+        toggleGroupsBtn.innerHTML = `
+            <i data-feather="users" style="width: 16px; height: 16px;"></i>
+            Disable Groups
+        `;
+    } else {
+        toggleGroupsBtn.className = 'btn outline';
+        toggleGroupsBtn.innerHTML = `
+            <i data-feather="users" style="width: 16px; height: 16px;"></i>
+            Enable Groups
+        `;
+    }
+    
+    feather.replace();
+}
+
+async function toggleAutoReply() {
+    try {
+        const response = await fetch('/api/ai/auto-reply/toggle', {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification(result.message, 'success');
+            await loadAutoReplyConfig();
+            addMessage('System', `🔄 ${result.message}`, 'system');
+        } else {
+            showNotification('Failed to toggle auto-reply', 'error');
+        }
+    } catch (error) {
+        showNotification('Error toggling auto-reply: ' + error.message, 'error');
+    }
+}
+
+async function togglePrivateChats() {
+    try {
+        const response = await fetch('/api/ai/auto-reply/toggle-private', {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification(result.message, 'success');
+            await loadAutoReplyConfig();
+            addMessage('System', `🔄 ${result.message}`, 'system');
+        } else {
+            showNotification('Failed to toggle private chat auto-reply', 'error');
+        }
+    } catch (error) {
+        showNotification('Error toggling private chat auto-reply: ' + error.message, 'error');
+    }
+}
+
+async function toggleGroups() {
+    try {
+        const response = await fetch('/api/ai/auto-reply/toggle-groups', {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification(result.message, 'success');
+            await loadAutoReplyConfig();
+            addMessage('System', `🔄 ${result.message}`, 'system');
+        } else {
+            showNotification('Failed to toggle group auto-reply', 'error');
+        }
+    } catch (error) {
+        showNotification('Error toggling group auto-reply: ' + error.message, 'error');
+    }
+}
+
 // Load current status and configuration on page load
 async function loadInitialStatus() {
     try {
@@ -882,6 +1039,7 @@ window.onload = () => {
     loadBlacklist();
     loadProviderConfig(); // Load provider configuration
     loadInitialStatus(); // Load WhatsApp status
+    loadAutoReplyConfig(); // Load auto-reply configuration
     
     // Add fade-in animation to elements
     const elements = document.querySelectorAll('.fade-in');

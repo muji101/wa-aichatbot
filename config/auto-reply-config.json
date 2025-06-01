@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "privateChats": false,
+  "groupChats": true,
+  "groups": false
+}

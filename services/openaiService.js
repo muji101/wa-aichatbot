@@ -10,9 +10,19 @@ class OpenAIService {
     this.conversationHistory = new Map();
     this.systemPromptPath = path.join(__dirname, '../config/system-prompt.txt');
     this.blacklistPath = path.join(__dirname, '../config/blacklist-words.txt');
+    this.autoReplyConfigPath = path.join(__dirname, '../config/auto-reply-config.json');
     this.blacklistWords = [];
+    
+    // Auto-reply configuration
+    this.autoReplyConfig = {
+      enabled: true,
+      privateChats: true,
+      groups: true
+    };
+    
     this.loadSystemPrompt();
     this.loadBlacklistWords();
+    this.loadAutoReplyConfig();
   }
 
   async loadSystemPrompt() {
@@ -238,7 +248,7 @@ class OpenAIService {
 
       // Generate response
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini-2024-07-18',
         messages: messages,
         max_tokens: 500,
         temperature: 0.7
@@ -302,6 +312,82 @@ class OpenAIService {
       totalBlacklistWords: this.blacklistWords.length,
       blacklistWords: this.blacklistWords
     };
+  }
+
+  // Auto-Reply Configuration Management
+  async loadAutoReplyConfig() {
+    try {
+      if (await fs.pathExists(this.autoReplyConfigPath)) {
+        const content = await fs.readFile(this.autoReplyConfigPath, 'utf8');
+        this.autoReplyConfig = JSON.parse(content);
+        console.log('⚙️ Auto-reply config loaded from file');
+      } else {
+        // Create default config file
+        await this.saveAutoReplyConfig(this.autoReplyConfig);
+        console.log('⚙️ Default auto-reply config created');
+      }
+    } catch (error) {
+      console.error('❌ Error loading auto-reply config:', error);
+      // Use default config if loading fails
+      this.autoReplyConfig = {
+        enabled: true,
+        privateChats: true,
+        groups: true
+      };
+    }
+  }
+
+  async saveAutoReplyConfig(config) {
+    try {
+      await fs.ensureDir(path.dirname(this.autoReplyConfigPath));
+      await fs.writeFile(this.autoReplyConfigPath, JSON.stringify(config, null, 2), 'utf8');
+      this.autoReplyConfig = { ...config };
+      console.log('✅ Auto-reply config saved successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error saving auto-reply config:', error);
+      return false;
+    }
+  }
+
+  async updateAutoReplyConfig(config) {
+    return await this.saveAutoReplyConfig(config);
+  }
+
+  getAutoReplyConfig() {
+    return { ...this.autoReplyConfig };
+  }
+
+  // Check if auto-reply should be enabled for a chat
+  shouldAutoReply(isGroup = false) {
+    // Check global toggle first
+    if (!this.autoReplyConfig.enabled) {
+      return false;
+    }
+
+    // Check specific chat type
+    if (isGroup && !this.autoReplyConfig.groups) {
+      return false;
+    }
+
+    if (!isGroup && !this.autoReplyConfig.privateChats) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // New method to reload auto-reply config
+  async reloadAutoReplyConfig() {
+    try {
+      console.log('🔄 Reloading auto-reply config from file...');
+      await this.loadAutoReplyConfig();
+      console.log('✅ Auto-reply config reloaded successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error reloading auto-reply config:', error);
+      return false;
+    }
   }
 }
 
