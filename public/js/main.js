@@ -1,5 +1,13 @@
-// Initialize Feather icons
+// Initialize Feather icons and ensure navbar is in correct state
 feather.replace();
+
+// Ensure navbar menu is closed on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const navbarMenu = document.getElementById('navbar-menu');
+    if (navbarMenu) {
+        navbarMenu.classList.remove('active');
+    }
+});
 
 const socket = io();
 let messageCount = 0;
@@ -1047,3 +1055,51 @@ window.onload = () => {
         el.style.animationDelay = `${index * 0.1}s`;
     });
 };
+
+// Navbar toggle function for mobile
+function toggleNavbar() {
+    const navbarMenu = document.getElementById('navbar-menu');
+    if (navbarMenu) {
+        navbarMenu.classList.toggle('active');
+        
+        // Add/remove body scroll lock when menu is open
+        if (navbarMenu.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+// Close navbar menu when clicking outside
+document.addEventListener('click', function(event) {
+    const navbarMenu = document.getElementById('navbar-menu');
+    const navbarToggle = document.querySelector('.navbar-toggle');
+    
+    if (navbarMenu && navbarToggle) {
+        if (!navbarMenu.contains(event.target) && !navbarToggle.contains(event.target)) {
+            navbarMenu.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+});
+
+// Close navbar menu when window is resized to desktop size
+window.addEventListener('resize', function() {
+    const navbarMenu = document.getElementById('navbar-menu');
+    if (navbarMenu && window.innerWidth > 768) {
+        navbarMenu.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+});
+
+// Close navbar menu when clicking on navbar items
+document.addEventListener('click', function(event) {
+    if (event.target.closest('.navbar-item')) {
+        const navbarMenu = document.getElementById('navbar-menu');
+        if (navbarMenu) {
+            navbarMenu.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+});

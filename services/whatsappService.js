@@ -345,8 +345,18 @@ class WhatsAppService {
     try {
       const systemMessageContent = this.openaiService.getSystemPrompt() || "You are a helpful assistant.";
       
+      // Get product context from OpenAI service's product service
+      const productContext = this.openaiService.productService.getProductContext(text);
+      
+      // Enhance system prompt with product information if relevant
+      let enhancedSystemPrompt = systemMessageContent;
+      if (productContext) {
+        enhancedSystemPrompt += productContext;
+        enhancedSystemPrompt += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
+      }
+      
       const messages = [
-        { role: "system", content: systemMessageContent },
+        { role: "system", content: enhancedSystemPrompt },
         { role: "user", content: `Message from ${senderName}: ${text}` }
       ];
       
@@ -389,8 +399,18 @@ class WhatsAppService {
     try {
       const systemInstruction = this.openaiService.getSystemPrompt() || "You are a helpful assistant.";
       
+      // Get product context from OpenAI service's product service
+      const productContext = this.openaiService.productService.getProductContext(text);
+      
+      // Enhance system instruction with product information if relevant
+      let enhancedSystemInstruction = systemInstruction;
+      if (productContext) {
+        enhancedSystemInstruction += productContext;
+        enhancedSystemInstruction += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
+      }
+      
       // Create a more appropriate prompt for Gemini
-      const fullPrompt = `${systemInstruction}\n\nUser (${senderName}): ${text}\n\nAssistant:`;
+      const fullPrompt = `${enhancedSystemInstruction}\n\nUser (${senderName}): ${text}\n\nAssistant:`;
       
       console.log(`🔄 Sending to Gemini: ${text}`);
       

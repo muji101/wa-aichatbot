@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const whatsappRoutes = require('./routes/whatsapp');
 const aiRoutes = require('./routes/ai');
+const productsRoutes = require('./routes/products');
 const WhatsAppService = require('./services/whatsappService');
 
 const app = express();
@@ -30,6 +31,7 @@ const whatsappService = new WhatsAppService(io);
 // Routes
 app.use('/api/whatsapp', whatsappRoutes(whatsappService));
 app.use('/api/ai', aiRoutes(whatsappService)); // Pass whatsappService to aiRoutes
+app.use('/api/products', productsRoutes);
 
 // WebSocket connection handling
 io.on('connection', (socket) => {

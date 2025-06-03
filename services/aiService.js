@@ -3,49 +3,89 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const fs = require('fs-extra');
 const path = require('path');
+const ProductService = require('./productService');
+
+// Constants for better maintainability
+const DEFAULT_SYSTEM_PROMPT = 'Kamu adalah asisten AI WhatsApp yang ramah dan membantu. Jawab pertanyaan dengan bahasa Indonesia yang santai dan informatif.';
+const MAX_CONVERSATION_LENGTH = 20;
+const DEFAULT_CONFIG = {
+  maxTokens: 1000,
+  temperature: 0.7,
+  models: {
+    openai: 'gpt-4o-mini-2024-07-18',
+    openrouter: 'openai/gpt-4o-mini-2024-07-18',
+    gemini: 'gemini-2.0-flash'
+  }
+};
 
 class AIService {
   constructor() {
-    this.currentProvider = process.env.AI_PROVIDER || 'openai'; // openai, openrouter, gemini
+    this.currentProvider = process.env.AI_PROVIDER || 'openai';
     this.conversationHistory = new Map();
     this.systemPromptPath = path.join(__dirname, '../config/system-prompt.txt');
     this.blacklistPath = path.join(__dirname, '../config/blacklist-words.txt');
     this.blacklistWords = [];
+    this.productService = new ProductService();
     
-    this.initializeProviders();
-    this.loadSystemPrompt();
-    this.loadBlacklistWords();
+    this._initializeService();
+  }
+
+  async _initializeService() {
+    try {
+      this.initializeProviders();
+      await this.loadSystemPrompt();
+      await this.loadBlacklistWords();
+      console.log(`🤖 AI Service initialized with provider: ${this.currentProvider}`);
+    } catch (error) {
+      console.error('❌ Error initializing AI Service:', error);
+      throw error;
+    }
   }
 
   initializeProviders() {
-    // OpenAI Client
-    if (process.env.OPENAI_API_KEY) {
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY
-      });
-    }
+    const providers = {
+      openai: () => this._initializeOpenAI(),
+      openrouter: () => this._initializeOpenRouter(),
+      gemini: () => this._initializeGemini()
+    };
 
-    // OpenRouter Client (uses OpenAI-compatible API)
-    if (process.env.OPENROUTER_API_KEY) {
-      this.openrouter = new OpenAI({
-        baseURL: 'https://openrouter.ai/api/v1',
-        apiKey: process.env.OPENROUTER_API_KEY,
-        defaultHeaders: {
-          'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3000',
-          'X-Title': process.env.OPENROUTER_TITLE || 'WhatsApp AI Bot'
-        }
-      });
-    }
+    Object.entries(providers).forEach(([provider, initializer]) => {
+      try {
+        initializer();
+      } catch (error) {
+        console.warn(`⚠️ Failed to initialize ${provider}:`, error.message);
+      }
+    });
+  }
 
-    // Gemini Client
-    if (process.env.GEMINI_API_KEY) {
-      this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      this.geminiModel = this.gemini.getGenerativeModel({ 
-        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash' 
-      });
-    }
+  _initializeOpenAI() {
+    if (!process.env.OPENAI_API_KEY) return;
+    
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+  }
 
-    console.log(`🤖 AI Service initialized with provider: ${this.currentProvider}`);
+  _initializeOpenRouter() {
+    if (!process.env.OPENROUTER_API_KEY) return;
+    
+    this.openrouter = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        'HTTP-Referer': process.env.OPENROUTER_REFERER || 'http://localhost:3000',
+        'X-Title': process.env.OPENROUTER_TITLE || 'WhatsApp AI Bot'
+      }
+    });
+  }
+
+  _initializeGemini() {
+    if (!process.env.GEMINI_API_KEY) return;
+    
+    this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.geminiModel = this.gemini.getGenerativeModel({ 
+      model: process.env.GEMINI_MODEL || DEFAULT_CONFIG.models.gemini 
+    });
   }
 
   async loadSystemPrompt() {
@@ -54,15 +94,14 @@ class AIService {
         this.systemPrompt = await fs.readFile(this.systemPromptPath, 'utf8');
         console.log('📝 System prompt loaded from file');
       } else {
-        this.systemPrompt = process.env.SYSTEM_PROMPT || 
-          'Kamu adalah asisten AI WhatsApp yang ramah dan membantu. Jawab pertanyaan dengan bahasa Indonesia yang santai dan informatif.';
+        this.systemPrompt = process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT;
         
         await this.saveSystemPrompt(this.systemPrompt);
         console.log('📝 System prompt loaded from environment and saved to file');
       }
     } catch (error) {
       console.error('❌ Error loading system prompt:', error);
-      this.systemPrompt = 'Kamu adalah asisten AI WhatsApp yang ramah dan membantu.';
+      this.systemPrompt = DEFAULT_SYSTEM_PROMPT;
     }
   }
 
@@ -140,29 +179,59 @@ class AIService {
     return this.blacklistWords.join(',');
   }
 
-  isMessageBlacklisted(message) {
-    if (!message || this.blacklistWords.length === 0) {
-      return false;
-    }
-
-    const messageWords = message.toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
+  // Helper methods for cleaner code organization
+  _parseWordsFromString(wordsString) {
+    return wordsString.toLowerCase()
+      .split(',')
+      .map(word => word.trim())
       .filter(word => word.length > 0);
+  }
 
-    for (const blackWord of this.blacklistWords) {
+  _checkExactWordMatch(messageWords, blacklistWords) {
+    for (const blackWord of blacklistWords) {
       if (messageWords.includes(blackWord)) {
-        console.log(`🚫 Message blocked: contains blacklisted word "${blackWord}"`);
         return { blocked: true, word: blackWord, reason: 'exact_match' };
       }
     }
+    return null;
+  }
 
+  _checkPartialWordMatch(message, blacklistWords) {
     const messageText = message.toLowerCase();
-    for (const blackWord of this.blacklistWords) {
+    for (const blackWord of blacklistWords) {
       if (messageText.includes(blackWord)) {
-        console.log(`🚫 Message blocked: contains blacklisted term "${blackWord}"`);
         return { blocked: true, word: blackWord, reason: 'partial_match' };
       }
+    }
+    return null;
+  }
+
+  _normalizeMessageForBlacklist(message) {
+    return message.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+  }
+
+  isMessageBlacklisted(message) {
+    if (!message || this.blacklistWords.length === 0) {
+      return { blocked: false };
+    }
+
+    const messageWords = this._normalizeMessageForBlacklist(message);
+    
+    // Check exact word matches first
+    const exactMatch = this._checkExactWordMatch(messageWords, this.blacklistWords);
+    if (exactMatch) {
+      console.log(`🚫 Message blocked: contains blacklisted word "${exactMatch.word}"`);
+      return exactMatch;
+    }
+
+    // Check partial matches
+    const partialMatch = this._checkPartialWordMatch(message, this.blacklistWords);
+    if (partialMatch) {
+      console.log(`🚫 Message blocked: contains blacklisted term "${partialMatch.word}"`);
+      return partialMatch;
     }
 
     return { blocked: false };
@@ -219,8 +288,8 @@ class AIService {
       conversation.push({ role: 'assistant', content: response });
 
       // Keep only last 10 messages to manage memory
-      if (conversation.length > 20) {
-        conversation = conversation.slice(-20);
+      if (conversation.length > MAX_CONVERSATION_LENGTH) {
+        conversation = conversation.slice(-MAX_CONVERSATION_LENGTH);
       }
 
       // Update conversation history
@@ -247,16 +316,27 @@ class AIService {
       throw new Error('OpenAI client not initialized. Please check OPENAI_API_KEY.');
     }
 
+    // Get the latest user message for product context
+    const latestMessage = conversation[conversation.length - 1]?.content || '';
+    const productContext = this.getEnhancedProductContext(latestMessage);
+    
+    // Enhance system prompt with product information if relevant
+    let enhancedSystemPrompt = this.systemPrompt;
+    if (productContext) {
+      enhancedSystemPrompt += productContext;
+      enhancedSystemPrompt += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
+    }
+
     const messages = [
-      { role: 'system', content: this.systemPrompt },
+      { role: 'system', content: enhancedSystemPrompt },
       ...conversation
     ];
 
     const response = await this.openai.chat.completions.create({
-      model: options.model || process.env.OPENAI_MODEL || 'gpt-4o-mini-2024-07-18',
+      model: options.model || process.env.OPENAI_MODEL || DEFAULT_CONFIG.models.openai,
       messages: messages,
-      max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || 1000,
-      temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || 0.7,
+      max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || DEFAULT_CONFIG.maxTokens,
+      temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || DEFAULT_CONFIG.temperature,
     });
 
     return response.choices[0].message.content;
@@ -267,16 +347,27 @@ class AIService {
       throw new Error('OpenRouter client not initialized. Please check OPENROUTER_API_KEY.');
     }
 
+    // Get the latest user message for product context
+    const latestMessage = conversation[conversation.length - 1]?.content || '';
+    const productContext = this.productService.getProductContext(latestMessage);
+    
+    // Enhance system prompt with product information if relevant
+    let enhancedSystemPrompt = this.systemPrompt;
+    if (productContext) {
+      enhancedSystemPrompt += productContext;
+      enhancedSystemPrompt += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
+    }
+
     const messages = [
-      { role: 'system', content: this.systemPrompt },
+      { role: 'system', content: enhancedSystemPrompt },
       ...conversation
     ];
 
     const response = await this.openrouter.chat.completions.create({
-      model: options.model || process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini-2024-07-18',
+      model: options.model || process.env.OPENROUTER_MODEL || DEFAULT_CONFIG.models.openrouter,
       messages: messages,
-      max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || 1000,
-      temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || 0.7,
+      max_tokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || DEFAULT_CONFIG.maxTokens,
+      temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || DEFAULT_CONFIG.temperature,
     });
 
     return response.choices[0].message.content;
@@ -285,6 +376,17 @@ class AIService {
   async generateGeminiResponse(conversation, options = {}) {
     if (!this.gemini || !this.geminiModel) {
       throw new Error('Gemini client not initialized. Please check GEMINI_API_KEY.');
+    }
+
+    // Get the latest user message for product context
+    const latestMessage = conversation[conversation.length - 1]?.content || '';
+    const productContext = this.productService.getProductContext(latestMessage);
+    
+    // Enhance system prompt with product information if relevant
+    let enhancedSystemPrompt = this.systemPrompt;
+    if (productContext) {
+      enhancedSystemPrompt += productContext;
+      enhancedSystemPrompt += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
     }
 
     // Convert conversation to Gemini format
@@ -299,19 +401,55 @@ class AIService {
     const chat = this.geminiModel.startChat({
       history: chatHistory,
       generationConfig: {
-        maxOutputTokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || 1000,
-        temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || 0.7,
+        maxOutputTokens: options.maxTokens || parseInt(process.env.MAX_TOKENS) || DEFAULT_CONFIG.maxTokens,
+        temperature: options.temperature || parseFloat(process.env.TEMPERATURE) || DEFAULT_CONFIG.temperature,
       },
     });
 
     // Add system prompt context to the first message if no history
     const prompt = chatHistory.length === 0 
-      ? `${this.systemPrompt}\n\nUser: ${currentMessage}`
+      ? `${enhancedSystemPrompt}\n\nUser: ${currentMessage}`
       : currentMessage;
 
     const result = await chat.sendMessage(prompt);
     const response = await result.response;
     return response.text();
+  }
+
+  // Enhanced product context for AI
+  getEnhancedProductContext(message) {
+    if (!message || typeof message !== 'string') return '';
+    
+    const messageLower = message.toLowerCase();
+    
+    // Check for specific requests
+    const wantsAllProducts = messageLower.includes('semua') || 
+                            messageLower.includes('all') || 
+                            messageLower.includes('daftar lengkap') || 
+                            messageLower.includes('list lengkap') || 
+                            messageLower.includes('katalog lengkap') ||
+                            messageLower.includes('complete catalog');
+    
+    const wantsByCategory = messageLower.match(/(?:produk|kategori|jenis)\s*(product|service|digital|course|other)/);
+    
+    if (wantsAllProducts) {
+      return this.productService.getAllProductsForAI();
+    }
+    
+    if (wantsByCategory) {
+      const category = wantsByCategory[1];
+      return this.productService.getProductsByCategoryForAI(category);
+    }
+    
+    // Check if searching for specific products
+    const searchTerms = messageLower.match(/(?:cari|search|find)\s+([a-zA-Z\s]+)/);
+    if (searchTerms) {
+      const query = searchTerms[1].trim();
+      return this.productService.searchProductsForAI(query);
+    }
+    
+    // Default to enhanced context from ProductService
+    return this.productService.getProductContext(message);
   }
 
   setProvider(provider) {
@@ -357,15 +495,15 @@ class AIService {
       available: this.getAvailableProviders(),
       configs: {
         openai: {
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini-2024-07-18',
+          model: process.env.OPENAI_MODEL || DEFAULT_CONFIG.models.openai,
           configured: !!this.openai
         },
         openrouter: {
-          model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini-2024-07-18',
+          model: process.env.OPENROUTER_MODEL || DEFAULT_CONFIG.models.openrouter,
           configured: !!this.openrouter
         },
         gemini: {
-          model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+          model: process.env.GEMINI_MODEL || DEFAULT_CONFIG.models.gemini,
           configured: !!this.gemini
         }
       }

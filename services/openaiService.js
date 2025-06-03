@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const fs = require('fs-extra');
 const path = require('path');
+const ProductService = require('./productService');
 
 class OpenAIService {
   constructor() {
@@ -12,6 +13,9 @@ class OpenAIService {
     this.blacklistPath = path.join(__dirname, '../config/blacklist-words.txt');
     this.autoReplyConfigPath = path.join(__dirname, '../config/auto-reply-config.json');
     this.blacklistWords = [];
+    
+    // Initialize product service for AI integration
+    this.productService = new ProductService();
     
     // Auto-reply configuration
     this.autoReplyConfig = {
@@ -233,11 +237,21 @@ class OpenAIService {
         history.splice(0, history.length - 10);
       }
 
+      // Get product context based on user message
+      const productContext = this.productService.getProductContext(userMessage);
+      
+      // Enhance system prompt with product information if relevant
+      let enhancedSystemPrompt = this.systemPrompt;
+      if (productContext) {
+        enhancedSystemPrompt += productContext;
+        enhancedSystemPrompt += '\n\nGunakan informasi produk di atas untuk menjawab pertanyaan user secara natural dan informatif. Jangan terdengar seperti robot - berikan respons yang ramah dan membantu.';
+      }
+
       // Prepare messages for OpenAI
       const messages = [
         {
           role: 'system',
-          content: this.systemPrompt
+          content: enhancedSystemPrompt
         },
         ...history,
         {
@@ -248,7 +262,7 @@ class OpenAIService {
 
       // Generate response
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini-2024-07-18',
+        model: 'gpt-4o-mini',
         messages: messages,
         max_tokens: 500,
         temperature: 0.7

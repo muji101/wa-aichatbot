@@ -25,7 +25,7 @@ module.exports = (whatsappService) => {
           },
           gemini: {
             hasApiKey: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key-here'),
-            model: 'gemini-pro'
+            model: 'gemini-2.0-flash'
           }
         }
       };

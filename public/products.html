@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katalog - WA AI Chat Bot</title>
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">        <div class="navbar-container">
+            <div class="navbar-brand">
+                <i data-feather="message-circle" class="navbar-icon"></i>
+                <span>WA AI Bot</span>
+            </div>
+            <div class="navbar-menu" id="navbar-menu">
+                <a href="index.html" class="navbar-item">
+                    <i data-feather="home"></i>
+                    <span>Dashboard</span>
+                </a>                <a href="products.html" class="navbar-item active">
+                    <i data-feather="grid"></i>
+                    <span>Katalog</span>
+                </a>
+            </div>
+            <div class="navbar-toggle" onclick="toggleNavbar()">
+                <i data-feather="menu"></i>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container relative">
+        <!-- Header Section -->
+        <div class="header fade-in">            <div class="header-content">
+                <h1>📚 Katalog</h1>
+                <p class="header-subtitle">Kelola produk dan jasa Anda dengan mudah</p>                <div class="status" id="connectionStatus">
+                    <div class="status-indicator active"></div>
+                    Katalog Manager Ready
+                </div>
+            </div>
+            
+            <!-- Navigation Back -->
+            <div class="social-buttons">
+                <a href="index.html" 
+                   aria-label="Kembali ke Dashboard"
+                   title="Kembali ke Dashboard"
+                   class="social-btn social-btn-trakteer">
+                    <i class="fas fa-arrow-left text-lg md:mr-2" aria-hidden="true"></i> 
+                    <span class="hidden md:inline">Back to Dashboard</span>
+                    <span class="sr-only md:hidden">Kembali ke Dashboard</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content Section -->
+        <div class="main-content">
+            <!-- Add Product Form -->
+            <div class="card fade-in">                <div class="card-header">
+                    <i data-feather="plus-circle" class="card-icon"></i>
+                    <h3>Add New Item</h3>
+                </div>
+                  <form id="productForm" onsubmit="addProduct(event)">
+                    <!-- Product Name and Category Row -->
+                    <div class="form-row">                        <div class="form-group">
+                            <label class="form-label" for="productName">Item Name:</label>
+                            <input 
+                                type="text" 
+                                class="form-input" 
+                                id="productName" 
+                                placeholder="Enter item name..."
+                                required
+                            >                            <div class="form-helper">
+                                <i data-feather="info"></i>
+                                A clear, descriptive name for your item or service
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="productCategory">Category:</label>
+                            <select class="form-input" id="productCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="product">Product</option>
+                                <option value="service">Service</option>
+                                <option value="digital">Digital</option>
+                                <option value="course">Course</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Description (Full Width) -->
+                    <div class="form-group">
+                        <label class="form-label" for="productDescription">Description:</label>                        <textarea 
+                            class="form-textarea" 
+                            id="productDescription" 
+                            placeholder="Describe your item or service..."
+                            rows="4"
+                            required
+                        ></textarea><div class="form-helper">
+                            <i data-feather="info"></i>
+                            Detailed description to help customers understand your offering
+                        </div>
+                    </div>
+                      <!-- Price and Stock Row -->
+                    <div class="form-row">
+                        <div class="form-group price-group">
+                            <label class="form-label" for="productPrice">Price (IDR):</label>
+                            <input 
+                                type="number" 
+                                class="form-input number" 
+                                id="productPrice" 
+                                placeholder="0"
+                                min="0"
+                                step="1000"
+                            >                            <div class="form-helper">
+                                <i data-feather="info"></i>
+                                Leave empty or set to 0 for "Contact for Price"
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="productStock">Stock:</label>
+                            <input 
+                                type="number" 
+                                class="form-input number" 
+                                id="productStock" 
+                                placeholder="0"
+                                min="0"
+                                value="0"
+                            >                            <div class="form-helper">
+                                <i data-feather="info"></i>
+                                Set to 0 for unlimited stock or services
+                            </div>
+                        </div>
+                    </div>                    <!-- Item Link (Full Width) -->
+                    <div class="form-group">
+                        <label class="form-label" for="productLink">Item Link:</label>
+                        <input 
+                            type="url" 
+                            class="form-input" 
+                            id="productLink" 
+                            placeholder="https://example.com/item"
+                        >                        <div class="form-helper">
+                            <i data-feather="info"></i>
+                            Optional: Link to item page or store
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="form-actions">                        <button type="submit" class="btn">
+                            <i data-feather="plus"></i>
+                            Add Item
+                        </button>
+                        <button type="button" class="btn outline" onclick="clearForm()">
+                            <i data-feather="x"></i>
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>            <!-- Katalog Statistics -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <i data-feather="bar-chart-2" class="card-icon"></i>
+                    <h3>Katalog Statistics</h3>
+                </div>
+                
+                <div class="stats-grid">                    <div class="stat-card">
+                        <div class="stat-number" id="totalProducts">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalServices">0</div>
+                        <div class="stat-label">Services</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="lowStockCount">0</div>
+                        <div class="stat-label">Low Stock</div>
+                    </div>
+                </div>
+            </div>            <!-- Katalog List -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <i data-feather="grid" class="card-icon"></i>
+                    <h3>Katalog List</h3><div class="card-header-actions">
+                        <button class="btn outline" onclick="loadProducts()">
+                            <i data-feather="refresh-cw"></i>
+                            Refresh
+                        </button>
+                        <button class="btn secondary" onclick="exportProducts()">
+                            <i data-feather="download"></i>
+                            Export
+                        </button>
+                    </div>
+                </div>
+                  <!-- Search and Filter -->
+                <div class="search-filter-container">                    <input 
+                        type="text" 
+                        class="form-input search-input" 
+                        id="searchProducts" 
+                        placeholder="Search items..."
+                        oninput="filterProducts()"
+                    >
+                    <select class="form-input filter-select" id="filterCategory" onchange="filterProducts()">
+                        <option value="">All Categories</option>
+                        <option value="product">Products</option>
+                        <option value="service">Services</option>
+                        <option value="digital">Digital</option>
+                        <option value="course">Courses</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="product-list" id="productList">                    <div class="empty-state">
+                        <i data-feather="grid" class="empty-state-icon"></i>
+                        <p>No items yet. Add your first item above.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    <!-- Edit Item Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-backdrop" onclick="closeEditModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Item</h3>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <i data-feather="x"></i>
+                </button>
+            </div>
+            <div class="modal-body"><form id="editProductForm" onsubmit="updateProduct(event)">
+                    <input type="hidden" id="editProductId">
+                      <!-- Item Name and Category Row -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editProductName">Item Name:</label>
+                            <input 
+                                type="text" 
+                                class="form-input" 
+                                id="editProductName" 
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="editProductCategory">Category:</label>
+                            <select class="form-input" id="editProductCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="product">Product</option>
+                                <option value="service">Service</option>
+                                <option value="digital">Digital</option>
+                                <option value="course">Course</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Description (Full Width) -->
+                    <div class="form-group">
+                        <label class="form-label" for="editProductDescription">Description:</label>
+                        <textarea 
+                            class="form-textarea" 
+                            id="editProductDescription" 
+                            rows="4"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Price and Stock Row -->
+                    <div class="form-row">
+                        <div class="form-group price-group">
+                            <label class="form-label" for="editProductPrice">Price (IDR):</label>
+                            <input 
+                                type="number" 
+                                class="form-input number" 
+                                id="editProductPrice" 
+                                min="0"
+                                step="1000"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="editProductStock">Stock:</label>
+                            <input 
+                                type="number" 
+                                class="form-input number" 
+                                id="editProductStock" 
+                                min="0"
+                            >
+                        </div>
+                    </div>
+                      <!-- Item Link (Full Width) -->
+                    <div class="form-group">
+                        <label class="form-label" for="editProductLink">Item Link:</label>
+                        <input 
+                            type="url" 
+                            class="form-input" 
+                            id="editProductLink"
+                        >
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn outline" onclick="closeEditModal()">
+                            Cancel
+                        </button>                        <button type="submit" class="btn">
+                            <i data-feather="save"></i>
+                            Update Item
+                        </button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="js/products.js"></script>
+    <script>
+        // Initialize feather icons when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            feather.replace();
+            loadProducts();
+        });
+    </script>
+</body>
+</html>

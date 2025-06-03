@@ -17,11 +17,34 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <i data-feather="message-circle" class="navbar-icon"></i>
+                <span>WA AI Bot</span>
+            </div>
+            <div class="navbar-menu" id="navbar-menu">
+                <a href="index.html" class="navbar-item active">
+                    <i data-feather="home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="products.html" class="navbar-item">
+                    <i data-feather="grid"></i>
+                    <span>Katalog</span>
+                </a>
+            </div>
+            <div class="navbar-toggle" onclick="toggleNavbar()">
+                <i data-feather="menu"></i>
+            </div>
+        </div>
+    </nav>
+    
     <div class="container relative">
         <!-- Header Section -->
         <div class="header fade-in">
             <div class="header-content">
-                <h1>🤖 WhatsApp AI Chat Bot</h1>
+                <h1>🤖 WA AI Chat Bot</h1>
                 <p class="header-subtitle">Kelola bot WhatsApp AI Anda dengan mudah</p>
                 <div class="status" id="connectionStatus">
                     <div class="loading-spinner"></div>
@@ -82,7 +105,7 @@
                     </div>
                 </div>
                 
-                <div class="control-group" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="control-group">
                     <button class="btn" onclick="startWhatsApp()">
                         <i data-feather="play"></i>
                         Start Bot
@@ -98,7 +121,7 @@
                 </div>
                 
                 <div class="qr-container" id="qrContainer">
-                    <i data-feather="square" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 1rem;"></i>
+                    <i data-feather="square" class="qr-placeholder-icon"></i>
                     <p>Click "Start Bot" to generate QR code</p>
                 </div>
             </div>
@@ -111,8 +134,8 @@
                 
                 <div class="form-group">
                     <label class="form-label">Current AI Provider:</label>
-                    <div id="currentProvider" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                        <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
+                    <div id="currentProvider" class="current-provider">
+                        <div class="loading-spinner loading-spinner-small"></div>
                         Loading...
                     </div>
                 </div>
