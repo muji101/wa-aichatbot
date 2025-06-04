@@ -186,6 +186,7 @@ class WhatsAppService {
       const messageText = this.extractMessageText(message);
       const senderId = message.key.remoteJid;
       const isGroup = senderId.includes('@g.us');
+      const isChannel = senderId.includes('@newsletter');
       const senderNumber = message.key.participant || senderId;
       
       // Emit received message to web clients
@@ -193,12 +194,27 @@ class WhatsAppService {
         from: senderId,
         body: messageText,
         timestamp: new Date(),
-        isGroup: isGroup
+        isGroup: isGroup,
+        isChannel: isChannel
       });
 
       // Skip if message is from status broadcast
       if (senderId === 'status@broadcast') {
         return;
+      }
+
+      // Skip if message is from WhatsApp Channel/Saluran
+      if (isChannel) {
+        console.log(`📢 Message from Channel skipped: ${senderId}`);
+        this.io.emit('message-skipped', {
+          from: senderId,
+          body: messageText,
+          timestamp: new Date(),
+          isGroup: isGroup,
+          isChannel: isChannel,
+          reason: 'WhatsApp Channel/Saluran - AI tidak memproses pesan dari channel'
+        });
+        return; // Skip AI processing for channels
       }
 
       console.log(`📨 Message from ${senderNumber}: ${messageText}`);
@@ -249,7 +265,14 @@ class WhatsAppService {
   async processWithAI(message, messageText, senderNumber, chatId) {
     try {
       const isGroup = chatId.includes('@g.us');
+      const isChannel = chatId.includes('@newsletter');
       const senderName = senderNumber.replace('@s.whatsapp.net', '');
+
+      // Additional safety check: Skip if this is a channel (should not reach here, but just in case)
+      if (isChannel) {
+        console.log(`📢 Channel message reached processWithAI - skipping: ${chatId}`);
+        return;
+      }
 
       // Check if auto-reply is enabled for this type of chat
       if (!this.openaiService.shouldAutoReply(isGroup)) {
