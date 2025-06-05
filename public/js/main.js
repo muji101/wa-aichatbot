@@ -294,12 +294,24 @@ socket.on('auth-failure', (data) => {
 
 // Message events
 socket.on('message-received', (data) => {
+    // Skip displaying messages from WhatsApp Channels
+    if (data.isChannel) {
+        console.log('📢 Channel message hidden from frontend:', data.from);
+        return; // Don't display channel messages in frontend
+    }
+    
     messageCount++;
     document.getElementById('messageCount').textContent = messageCount;
     addMessage(data.from, data.body, 'received');
 });
 
 socket.on('message-blocked', (data) => {
+    // Skip displaying blocked messages from WhatsApp Channels
+    if (data.isChannel) {
+        console.log('📢 Channel blocked message hidden from frontend:', data.from);
+        return; // Don't display channel blocked messages in frontend
+    }
+    
     blockedCount++;
     document.getElementById('blockedCount').textContent = blockedCount;
     addMessage('🚫 BLOCKED', `Message from ${data.contact}: "${data.message}"`, 'blocked');
@@ -311,6 +323,16 @@ socket.on('ai-response', (data) => {
 
 socket.on('error', (data) => {
     addMessage('Error', data.message, 'error');
+});
+
+// Handle skipped messages (but hide channel messages)
+socket.on('message-skipped', (data) => {
+    // Only show non-channel skipped messages in frontend
+    if (!data.isChannel) {
+        addMessage('⏭️ SKIPPED', `Message from ${data.from}: "${data.body}" - ${data.reason}`, 'skipped');
+    } else {
+        console.log('📢 Channel message skipped and hidden from frontend:', data.from);
+    }
 });
 
 // Auto-reply hot reload events
@@ -326,6 +348,12 @@ socket.on('auto-reply-config-reloaded', (data) => {
 
 // Message received but no auto-reply event
 socket.on('message-received-no-reply', (data) => {
+    // Skip displaying messages from WhatsApp Channels
+    if (data.isChannel) {
+        console.log('📢 Channel no-reply message hidden from frontend:', data.from);
+        return; // Don't display channel messages in frontend
+    }
+    
     messageCount++;
     document.getElementById('messageCount').textContent = messageCount;
     addMessage(`${data.contact} (No Reply)`, `${data.message} \n\n🔇 ${data.reason}`, 'received');
@@ -555,7 +583,8 @@ function getMessageIcon(type) {
         'sent': 'send',
         'system': 'info',
         'error': 'alert-circle',
-        'blocked': 'shield'
+        'blocked': 'shield',
+        'skipped': 'skip-forward'
     };
     return icons[type] || 'message-square';
 }

@@ -483,6 +483,12 @@ body::before {
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
 }
 
+.message.skipped {
+    border-left-color: #9ca3af;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    opacity: 0.8;
+}
+
 .message-header {
     display: flex;
     justify-content: space-between;
